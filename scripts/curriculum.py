@@ -90,6 +90,10 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--hidden-dim", type=int,   default=256)
     p.add_argument("--seed",         type=int,   default=42)
     p.add_argument("--log-interval", type=int,   default=10)
+    p.add_argument("--timestep-scale", type=float, default=1.0,
+                   help="Multiply all stage timestep budgets by this factor. "
+                        "Use 2.0 for 4×4, 3.0 for 5×5 to compensate for "
+                        "larger state/action spaces and longer episodes.")
     # Resume
     p.add_argument("--resume-stage", type=int, default=0,
                    help="Index (0-based) of the first stage to run")
@@ -107,6 +111,13 @@ def make_policy(rows: int, cols: int, hidden_dim: int) -> MBQCActorCritic:
 def main() -> None:
     args       = parse_args()
     curriculum = QUICK_CURRICULUM if args.quick else DEFAULT_CURRICULUM
+
+    # Apply timestep scale (e.g. 2.0 for 4×4, 3.0 for 5×5)
+    if args.timestep_scale != 1.0:
+        curriculum = [
+            dict(s, timesteps=int(s["timesteps"] * args.timestep_scale))
+            for s in curriculum
+        ]
 
     torch.manual_seed(args.seed)
     np.random.seed(args.seed)

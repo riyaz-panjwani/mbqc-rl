@@ -1,0 +1,140 @@
+[
+  {
+    "defect_rate": 0.0,
+    "n_episodes": 500,
+    "gflow_rate": 100.0,
+    "agent": {
+      "label": "PPO agent",
+      "mean": 1.0,
+      "std": 0.0,
+      "pct_perfect": 100.0
+    },
+    "greedy": {
+      "label": "Greedy",
+      "mean": 1.0,
+      "std": 0.0,
+      "pct_perfect": 100.0
+    },
+    "random": {
+      "label": "Random",
+      "mean": 0.5026666666666666,
+      "std": 0.2886628175263004,
+      "pct_perfect": 12.6
+    }
+  },
+  {
+    "defect_rate": 0.01,
+    "n_episodes": 500,
+    "gflow_rate": 99.4,
+    "agent": {
+      "label": "PPO agent",
+      "mean": 0.9912666666666666,
+      "std": 0.08335570366407648,
+      "pct_perfect": 98.6
+    },
+    "greedy": {
+      "label": "Greedy",
+      "mean": 0.994,
+      "std": 0.07722693830523131,
+      "pct_perfect": 99.4
+    },
+    "random": {
+      "label": "Random",
+      "mean": 0.5036,
+      "std": 0.290396923766994,
+      "pct_perfect": 12.6
+    }
+  },
+  {
+    "defect_rate": 0.05,
+    "n_episodes": 500,
+    "gflow_rate": 93.60000000000001,
+    "agent": {
+      "label": "PPO agent",
+      "mean": 0.9210952380952381,
+      "std": 0.2500168293655177,
+      "pct_perfect": 88.6
+    },
+    "greedy": {
+      "label": "Greedy",
+      "mean": 0.936,
+      "std": 0.24475293665245368,
+      "pct_perfect": 93.60000000000001
+    },
+    "random": {
+      "label": "Random",
+      "mean": 0.47255714285714284,
+      "std": 0.3002256268322255,
+      "pct_perfect": 10.2
+    }
+  },
+  {
+    "defect_rate": 0.1,
+    "n_episodes": 500,
+    "gflow_rate": 84.8,
+    "agent": {
+      "label": "PPO agent",
+      "mean": 0.8227761904761905,
+      "std": 0.35843292117157965,
+      "pct_perfect": 75.8
+    },
+    "greedy": {
+      "label": "Greedy",
+      "mean": 0.848,
+      "std": 0.35902089075707005,
+      "pct_perfect": 84.8
+    },
+    "random": {
+      "label": "Random",
+      "mean": 0.4304047619047619,
+      "std": 0.30574763484473905,
+      "pct_perfect": 7.8
+    }
+  },
+  {
+    "defect_rate": 0.2,
+    "n_episodes": 500,
+    "gflow_rate": 65.8,
+    "agent": {
+      "label": "PPO agent",
+      "mean": 0.6190055555555556,
+      "std": 0.4581060975149457,
+      "pct_perfect": 52.0
+    },
+    "greedy": {
+      "label": "Greedy",
+      "mean": 0.658,
+      "std": 0.47437959483940706,
+      "pct_perfect": 65.8
+    },
+    "random": {
+      "label": "Random",
+      "mean": 0.3224785714285714,
+      "std": 0.31111760012162953,
+      "pct_perfect": 4.3999999999999995
+    }
+  },
+  {
+    "defect_rate": 0.3,
+    "n_episodes": 500,
+    "gflow_rate": 42.199999999999996,
+    "agent": {
+      "label": "PPO agent",
+      "mean": 0.38871428571428573,
+      "std": 0.4650072074149451,
+      "pct_perfect": 31.0
+    },
+    "greedy": {
+      "label": "Greedy",
+      "mean": 0.422,
+      "std": 0.49387852757535433,
+      "pct_perfect": 42.199999999999996
+    },
+    "random": {
+      "label": "Random",
+      "mean": 0.20919047619047618,
+      "std": 0.2908924457011326,
+      "pct_perfect": 2.4
+    }
+  }
+]
