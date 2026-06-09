@@ -82,6 +82,7 @@ class MBQCEnv(gym.Env):
         self._measured: np.ndarray | None = None     # (n,) bool
         self._step_of: dict[int, int] = {}           # qubit → step number
         self._gflow: dict[int, set[int]] | None = None
+        self._gflow_order: dict[int, int] | None = None
         self._step_count: int = 0
 
     # ------------------------------------------------------------------
@@ -116,7 +117,7 @@ class MBQCEnv(gym.Env):
         for q in self._output_set:
             self._measured[q] = True
 
-        self._gflow, _ = compute_gflow(graph, output_qubits)
+        self._gflow, self._gflow_order = compute_gflow(graph, output_qubits)
 
         obs = self._build_obs()
         info = {
@@ -187,6 +188,16 @@ class MBQCEnv(gym.Env):
     @property
     def output_qubits(self) -> list[int]:
         return sorted(self._output_set)
+
+    @property
+    def gflow(self) -> dict | None:
+        """The gflow correction-set map computed at reset(), or None."""
+        return self._gflow
+
+    @property
+    def gflow_order(self) -> dict | None:
+        """Layer ordering from compute_gflow() — output=0, higher=measured earlier."""
+        return self._gflow_order
 
     def valid_actions(self) -> list[int]:
         return [q for q in range(self.n)
