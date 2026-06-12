@@ -114,6 +114,8 @@ def evaluate_at_rate(
     n_episodes: int,
     seed: int,
     device: torch.device,
+    use_angles: bool = False,
+    clifford_fraction: float = 0.5,
 ) -> dict:
     """
     Run n_episodes at a fixed defect rate and return per-method statistics.
@@ -123,9 +125,11 @@ def evaluate_at_rate(
     random_r = np.zeros(n_episodes)
     gflow_n  = 0
 
-    env_a = MBQCEnv(rows=rows, cols=cols, defect_rate=defect_rate)
-    env_g = MBQCEnv(rows=rows, cols=cols, defect_rate=defect_rate)
-    env_r = MBQCEnv(rows=rows, cols=cols, defect_rate=defect_rate)
+    env_kwargs = dict(rows=rows, cols=cols, defect_rate=defect_rate,
+                      use_angles=use_angles, clifford_fraction=clifford_fraction)
+    env_a = MBQCEnv(**env_kwargs)
+    env_g = MBQCEnv(**env_kwargs)
+    env_r = MBQCEnv(**env_kwargs)
     rng   = np.random.default_rng(seed + 77777)
 
     for i in range(n_episodes):
@@ -226,6 +230,8 @@ def main() -> None:
     obs_dim    = cfg.get("obs_dim",    rows * cols * (rows * cols + 1))
     n_actions  = cfg.get("n_actions",  rows * cols)
     hidden_dim = cfg.get("hidden_dim", 256)
+    use_angles = cfg.get("use_angles", False)
+    cliff_frac = cfg.get("clifford_fraction", 0.5)
 
     policy = MBQCActorCritic(obs_dim=obs_dim, n_actions=n_actions,
                               hidden_dim=hidden_dim)
@@ -251,6 +257,8 @@ def main() -> None:
             n_episodes=args.n_episodes,
             seed=args.seed,
             device=device,
+            use_angles=use_angles,
+            clifford_fraction=cliff_frac,
         )
         all_results.append(res)
         print(f"  {rate:>6.3f}  "

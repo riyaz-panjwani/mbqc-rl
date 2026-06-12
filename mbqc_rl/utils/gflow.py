@@ -124,6 +124,46 @@ def score_measurement_order(
     return 1.0 if total == 0 else satisfied / total
 
 
+def score_measurement_order_angled(
+    gflow_map: dict[int, set[int]],
+    measurement_steps: dict[int, int],
+    output_set: set[int],
+    angles: dict[int, int],
+) -> float:
+    """
+    Angle-aware ordering score for universal (non-Clifford) MBQC patterns.
+
+    Physics: when qubit v is measured, corrections land on the qubits in
+    g(v). If a correction target w has a CLIFFORD angle (k even), the
+    correction is a Pauli that can be tracked classically — w's physical
+    measurement basis never changes, so the constraint v ≺ w is free.
+    If w has a NON-CLIFFORD angle (k odd), the correction changes w's
+    measurement basis non-trivially, so w genuinely must be measured
+    after v — a hard constraint.
+
+    Only hard constraints are scored. Returns fraction satisfied ∈ [0, 1];
+    1.0 if there are no hard constraints (fully Clifford pattern — any
+    order works, consistent with Gottesman–Knill).
+    """
+    total = 0
+    satisfied = 0
+
+    for v, g_v in gflow_map.items():
+        if v not in measurement_steps:
+            continue
+        step_v = measurement_steps[v]
+        for w in g_v:
+            if w in output_set:
+                continue
+            if angles.get(w, 0) % 2 == 0:      # Clifford target → free
+                continue
+            total += 1
+            if w in measurement_steps and step_v < measurement_steps[w]:
+                satisfied += 1
+
+    return 1.0 if total == 0 else satisfied / total
+
+
 # ---------------------------------------------------------------------------
 # Internal
 # ---------------------------------------------------------------------------

@@ -94,6 +94,11 @@ def parse_args() -> argparse.Namespace:
                    help="Multiply all stage timestep budgets by this factor. "
                         "Use 2.0 for 4×4, 3.0 for 5×5 to compensate for "
                         "larger state/action spaces and longer episodes.")
+    p.add_argument("--use-angles", action="store_true",
+                   help="Universal (non-Clifford) MBQC: random k·π/4 measurement "
+                        "angles per qubit; reward counts only hard constraints.")
+    p.add_argument("--clifford-fraction", type=float, default=0.5,
+                   help="Probability a qubit's angle is Clifford (with --use-angles)")
     # Resume
     p.add_argument("--resume-stage", type=int, default=0,
                    help="Index (0-based) of the first stage to run")
@@ -102,9 +107,10 @@ def parse_args() -> argparse.Namespace:
     return p.parse_args()
 
 
-def make_policy(rows: int, cols: int, hidden_dim: int) -> MBQCActorCritic:
+def make_policy(rows: int, cols: int, hidden_dim: int,
+                use_angles: bool = False) -> MBQCActorCritic:
     n       = rows * cols
-    obs_dim = n * n + n
+    obs_dim = n * n + n + (n if use_angles else 0)
     return MBQCActorCritic(obs_dim=obs_dim, n_actions=n, hidden_dim=hidden_dim)
 
 
@@ -124,8 +130,9 @@ def main() -> None:
     os.makedirs(args.save_dir, exist_ok=True)
 
     n          = args.rows * args.cols
-    obs_dim    = n * n + n
-    policy     = make_policy(args.rows, args.cols, args.hidden_dim)
+    obs_dim    = n * n + n + (n if args.use_angles else 0)
+    policy     = make_policy(args.rows, args.cols, args.hidden_dim,
+                             use_angles=args.use_angles)
     optimizer  = torch.optim.Adam(policy.parameters(), lr=args.lr, eps=1e-5)
     all_history: list[dict] = []
 
@@ -153,6 +160,8 @@ def main() -> None:
         env = MBQCEnv(
             rows=args.rows, cols=args.cols,
             defect_rate=stage["defect_rate"],
+            use_angles=args.use_angles,
+            clifford_fraction=args.clifford_fraction,
             seed=args.seed + stage_idx,
         )
 
@@ -194,7 +203,9 @@ def main() -> None:
             "optimizer_state_dict": optimizer.state_dict(),
             "config": dict(rows=args.rows, cols=args.cols,
                            obs_dim=obs_dim, n_actions=n,
-                           hidden_dim=args.hidden_dim),
+                           hidden_dim=args.hidden_dim,
+                           use_angles=args.use_angles,
+                           clifford_fraction=args.clifford_fraction),
         }, ckpt_path)
         print(f"  Stage {stage_idx} checkpoint → {ckpt_path}")
 

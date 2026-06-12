@@ -210,6 +210,8 @@ def main() -> None:
     obs_dim    = cfg.get("obs_dim",    rows * cols * (rows * cols + 1))
     n_actions  = cfg.get("n_actions",  rows * cols)
     hidden_dim = cfg.get("hidden_dim", 256)
+    use_angles = cfg.get("use_angles", False)
+    cliff_frac = cfg.get("clifford_fraction", 0.5)
 
     device = torch.device("cpu")  # evaluation on CPU for reproducibility
 
@@ -233,9 +235,11 @@ def main() -> None:
     gflow_exists   = np.zeros(args.n_trials, dtype=bool)
 
     # Three separate envs so each agent sees the same seed → same graph
-    env_agent  = MBQCEnv(rows=rows, cols=cols, defect_rate=args.defect_rate)
-    env_greedy = MBQCEnv(rows=rows, cols=cols, defect_rate=args.defect_rate)
-    env_random = MBQCEnv(rows=rows, cols=cols, defect_rate=args.defect_rate)
+    env_kwargs = dict(rows=rows, cols=cols, defect_rate=args.defect_rate,
+                      use_angles=use_angles, clifford_fraction=cliff_frac)
+    env_agent  = MBQCEnv(**env_kwargs)
+    env_greedy = MBQCEnv(**env_kwargs)
+    env_random = MBQCEnv(**env_kwargs)
     rng        = np.random.default_rng(args.seed + 9999)
 
     print_every = max(1, args.n_trials // 10)

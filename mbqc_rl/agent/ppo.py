@@ -109,7 +109,7 @@ class PPOTrainer:
         self.policy.to(self.device)
 
         n       = env.n
-        obs_dim = n * n + n
+        obs_dim = int(env.observation_space["observation"].shape[0])
         self.buffer = RolloutBuffer(n_steps, obs_dim, n, gamma, gae_lambda)
 
         # Running environment state — persists across collect_rollout() calls
