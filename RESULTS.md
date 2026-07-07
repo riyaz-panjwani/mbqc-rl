@@ -27,8 +27,11 @@ states from a fidelity-style reward alone. Contributions:
 7. **Reward validated** against the tested `graphix` simulator (gflow correct;
    reward optimum ⇔ deterministic computation).
 8. **Flow-hierarchy comparison** (causal flow ⊆ gflow ⊆ Pauli flow).
+9. **Released benchmark** (§13): the proposal's 1,000 defective grid instances
+   (+500 irregular) as a fixed, gflow-labelled dataset with reference baseline
+   rewards, for future research.
 
-Test suite: **171 passing**. Runtime: `/usr/local/bin/python3.13`; training on
+Test suite: **180 passing**. Runtime: `/usr/local/bin/python3.13`; training on
 Apple-Silicon MPS.
 
 ---
@@ -335,11 +338,14 @@ irregular scattered above it.
 ---
 
 ## 10. Honest limitations
-- RL/GNN matches/approaches but does not robustly beat strong hand-designed
-  heuristics anywhere tested.
+- On regular lattices RL only *matches* the static heuristic (provably optimal
+  there, §9b) — the win is specific to irregular graphs, where the heuristic is
+  suboptimal.
+- The irregular win requires training **at the target size** (no zero-shot size
+  transfer) and the early-stopping + ensemble recipe (a single final checkpoint
+  overfits); it is not a property of one bare policy.
 - Reward is gflow-consistency (validated at its optimum); full noisy-fidelity
   simulation of arbitrary orders not done (endpoints validated via graphix).
-- Irregular generalisation gap unresolved (train 0.98 vs held-out 0.82).
 - Edge-deletion defects only; ≤36 qubits; GAT architecture family only.
 
 ---
@@ -357,3 +363,25 @@ Key scripts: `train_mixed.py`, `train_gnn.py`, `benchmark.py`, `aggregate_seeds.
 `compare_baselines.py`, `eval_brickwork.py`, `make_figures.py`,
 `validate_reward_graphix.py`, `flow_comparison.py`. Suites: `run_full_suite.sh`,
 `run_ladder.sh`, `run_generalization.sh`.
+
+---
+
+## 13. Benchmark deliverable (`benchmark/`)
+
+The proposal's **"1,000 randomised defective grid instances"** are released as a
+fixed, versioned, labelled benchmark for future research (`scripts/build_benchmark.py`,
+loader `mbqc_rl/benchmark.py`, 9 integrity tests):
+
+- `grids_defective_n1000.jsonl` — 1,000 grid instances (4 sizes × 5 defect rates
+  {0.01…0.30} × 50).
+- `irregular_n500.jsonl` — 501 clean irregular flow-graph instances (the win regime).
+
+Each record ships the graph + outputs + defect rate + **held-out seed** (base 1e6
+grids / 2e6 irregular, disjoint from all training and selection seeds), the
+**ground-truth gflow labels** (per-node layer order + correction sets), and
+**reference rewards** (oracle / distance-heuristic / random) on the
+gflow-consistency objective — a common yardstick a new method can be scored
+against without rerunning generation. Labels reproduce a fresh recompute with 0
+mismatches over all 1,501 instances (gflow cross-validated vs graphix, §8). The
+per-defect-rate `gflow_exists` gradient (e.g. 6×6: 48/50 solvable at 1% → 0/50 at
+30%) is itself a usable artefact for studying the determinism boundary.
