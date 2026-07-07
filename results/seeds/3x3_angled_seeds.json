@@ -1,0 +1,40 @@
+{
+  "pattern": "results/3x3_angled_mixed_s*/final.pt",
+  "defect_rate": 0.01,
+  "n_trials": 500,
+  "per_seed": [
+    {
+      "checkpoint": "results/3x3_angled_mixed_s0/final.pt",
+      "rows": 3,
+      "cols": 3,
+      "use_angles": true,
+      "mean": 0.9619333333333333,
+      "std": 0.18171355969706218,
+      "pct_perfect": 95.19999999999999
+    },
+    {
+      "checkpoint": "results/3x3_angled_mixed_s1/final.pt",
+      "rows": 3,
+      "cols": 3,
+      "use_angles": true,
+      "mean": 0.972,
+      "std": 0.16497272501841023,
+      "pct_perfect": 97.2
+    },
+    {
+      "checkpoint": "results/3x3_angled_mixed_s2/final.pt",
+      "rows": 3,
+      "cols": 3,
+      "use_angles": true,
+      "mean": 0.972,
+      "std": 0.16497272501841023,
+      "pct_perfect": 97.2
+    }
+  ],
+  "across_seeds": {
+    "mean_of_means": 0.9686444444444445,
+    "std_of_means": 0.004745472175963053,
+    "mean_pct_perfect": 96.53333333333332,
+    "std_pct_perfect": 0.94280904158207
+  }
+}

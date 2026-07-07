@@ -6,7 +6,9 @@ import numpy as np
 import pytest
 
 from mbqc_rl.env.mbqc_env        import MBQCEnv
-from mbqc_rl.baselines.classical  import RandomBaseline, GreedyGflowBaseline, TopologicalBaseline
+from mbqc_rl.baselines.classical  import (
+    RandomBaseline, GreedyGflowBaseline, TopologicalBaseline, StaticScheduleBaseline,
+)
 from mbqc_rl.utils.metrics        import rolling_mean, save_history, load_history, summarise
 
 
@@ -35,6 +37,32 @@ def _run_episode(env, baseline):
         total += reward
         done = terminated or truncated
     return total
+
+
+# ---------------------------------------------------------------------------
+# StaticScheduleBaseline (the human / textbook fixed-order baseline)
+# ---------------------------------------------------------------------------
+
+class TestStaticScheduleBaseline:
+    def test_perfect_grid_scores_one(self, perfect_env):
+        """On a defect-free grid the fixed column-sweep order = gflow order = 1.0."""
+        baseline = StaticScheduleBaseline(perfect_env)
+        assert _run_episode(perfect_env, baseline) == 1.0
+
+    def test_order_is_geometric_not_gflow(self, perfect_env):
+        """Plan is computed from column index alone — leftmost column first."""
+        obs, info = perfect_env.reset(seed=0)
+        baseline = StaticScheduleBaseline(perfect_env)
+        baseline.reset(obs, info)
+        cols = perfect_env.cols
+        plan_cols = [q % cols for q in baseline._plan]
+        assert plan_cols == sorted(plan_cols)          # ascending column order
+        assert all(c < cols - 1 for c in plan_cols)    # never schedules outputs
+
+    def test_always_valid_and_completes(self, defective_env):
+        baseline = StaticScheduleBaseline(defective_env)
+        total = _run_episode(defective_env, baseline)
+        assert 0.0 <= total <= 1.0
 
 
 # ---------------------------------------------------------------------------

@@ -47,8 +47,41 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from mbqc_rl.env.mbqc_env        import MBQCEnv
 from mbqc_rl.agent.policy        import MBQCActorCritic
+from mbqc_rl.agent.gnn_policy    import GNNActorCritic
 from mbqc_rl.baselines.classical import GreedyGflowBaseline, RandomBaseline
 from mbqc_rl.utils.metrics       import save_history
+
+
+def _load_policy(ckpt: dict, device: torch.device):
+    """Instantiate and load the right policy class from a checkpoint."""
+    cfg        = ckpt.get("config", {})
+    model_type = cfg.get("model_type", "mlp")
+
+    if model_type == "gnn":
+        n          = cfg.get("n", cfg.get("rows", 3) * cfg.get("cols", 3))
+        hidden_dim = cfg.get("hidden_dim", 64)
+        n_heads    = cfg.get("n_heads", 4)
+        n_layers   = cfg.get("n_layers", 3)
+        use_angles = cfg.get("use_angles", False)
+        policy = GNNActorCritic(n=n, hidden_dim=hidden_dim, n_heads=n_heads,
+                                n_layers=n_layers, use_angles=use_angles,
+                                virtual_node=cfg.get("virtual_node", False),
+                                weight_tied=cfg.get("weight_tied", False),
+                                pos_dim=cfg.get("pos_dim", 0),
+                                aux_layer_head=cfg.get("aux_layer_head", False))
+    else:
+        rows       = cfg.get("rows", 3)
+        cols       = cfg.get("cols", 3)
+        obs_dim    = cfg.get("obs_dim", rows * cols * (rows * cols + 1))
+        n_actions  = cfg.get("n_actions", rows * cols)
+        hidden_dim = cfg.get("hidden_dim", 256)
+        policy = MBQCActorCritic(obs_dim=obs_dim, n_actions=n_actions,
+                                 hidden_dim=hidden_dim)
+
+    policy.load_state_dict(ckpt["policy_state_dict"])
+    policy.to(device)
+    policy.eval()
+    return policy
 
 
 # ---------------------------------------------------------------------------
@@ -215,12 +248,7 @@ def main() -> None:
 
     device = torch.device("cpu")  # evaluation on CPU for reproducibility
 
-    policy = MBQCActorCritic(
-        obs_dim=obs_dim, n_actions=n_actions, hidden_dim=hidden_dim
-    )
-    policy.load_state_dict(ckpt["policy_state_dict"])
-    policy.to(device)
-    policy.eval()
+    policy = _load_policy(ckpt, device)
 
     print(f"\n{'═'*65}")
     print(f"  BENCHMARK: {rows}×{cols} grid  defect_rate={args.defect_rate:.3f}")
@@ -236,7 +264,8 @@ def main() -> None:
 
     # Three separate envs so each agent sees the same seed → same graph
     env_kwargs = dict(rows=rows, cols=cols, defect_rate=args.defect_rate,
-                      use_angles=use_angles, clifford_fraction=cliff_frac)
+                      use_angles=use_angles, clifford_fraction=cliff_frac,
+                      observe_original_graph=cfg.get("observe_original", False))
     env_agent  = MBQCEnv(**env_kwargs)
     env_greedy = MBQCEnv(**env_kwargs)
     env_random = MBQCEnv(**env_kwargs)

@@ -108,6 +108,107 @@ class GreedyGflowBaseline:
         return int(self._rng.choice(valid))
 
 
+class StaticScheduleBaseline:
+    """
+    Non-adaptive 'textbook' schedule — the natural human / hand-designed baseline.
+
+    A person who understands MBQC, asked to measure a grid resource state, would
+    sweep column by column from the input side toward the outputs: measure the
+    leftmost column first, then the next, ending at the (never-measured) output
+    column on the right. On a *defect-free* grid this fixed order is exactly the
+    causal-flow (Danos & Kashefi 2006) order and is optimal (reward 1.0).
+
+    Crucially this baseline is computed ONCE from the grid geometry alone (the
+    column index of each qubit) and is applied UNCHANGED to every instance — it
+    never inspects the per-graph gflow. That is what makes it a fair proxy for a
+    human / static compiler schedule rather than an oracle: when edge defects
+    change the true gflow, the static order cannot adapt and its reward degrades.
+    The gap between this baseline and the RL agent is therefore a direct measure
+    of the *value of adaptation*, which is the whole point of learning a policy.
+
+    Order: ascending column (leftmost = highest defect-free gflow layer = first),
+    ties broken by row. Skips qubits already removed; falls back to any valid
+    qubit only if the schedule is exhausted.
+    """
+
+    def __init__(self, env: MBQCEnv, rng: np.random.Generator | None = None) -> None:
+        self._env = env
+        self._rng = rng or np.random.default_rng()
+        self._plan: list[int] = []
+        self._plan_idx: int = 0
+
+    def reset(self, obs_dict: dict, info: dict) -> None:  # noqa: ARG002
+        cols = self._env.cols
+        non_output = [q for q in range(self._env.n) if q not in self._env._output_set]
+        # Fixed geometric order: leftmost column first (col = q % cols), then row.
+        self._plan = sorted(non_output, key=lambda q: (q % cols, q // cols))
+        self._plan_idx = 0
+
+    def select_action(self, obs_dict: dict) -> int:
+        mask = obs_dict["action_mask"]
+        while self._plan_idx < len(self._plan):
+            action = self._plan[self._plan_idx]
+            self._plan_idx += 1
+            if mask[action] == 1:
+                return action
+        valid = np.where(mask == 1)[0]
+        return int(self._rng.choice(valid))
+
+
+class DistanceScheduleBaseline:
+    """
+    Structural 'farthest-from-output first' schedule — the strongest hand-designed
+    heuristic, and the fair baseline on *irregular* graphs.
+
+    Unlike StaticScheduleBaseline (which uses the grid column index), this orders
+    qubits by graph distance from the output set: measure the most-upstream
+    (farthest) qubits first. It needs no geometric embedding — only the graph —
+    so it is permutation-invariant and well-defined on any topology. On a grid it
+    reduces exactly to the column sweep, and on lattices it is near-optimal.
+
+    It is, however, still NON-ADAPTIVE and computed from distance alone, never the
+    gflow. On irregular graphs whose gflow order is not monotonic in
+    distance-from-output (e.g. skip edges that shortcut an upstream qubit close to
+    an output) this heuristic is provably suboptimal — that is the regime where a
+    learned policy that reads the full adjacency can beat it.
+    """
+
+    def __init__(self, env: MBQCEnv, rng: np.random.Generator | None = None) -> None:
+        self._env = env
+        self._rng = rng or np.random.default_rng()
+        self._plan: list[int] = []
+        self._plan_idx: int = 0
+
+    def reset(self, obs_dict: dict, info: dict) -> None:  # noqa: ARG002
+        import networkx as nx
+        G = self._env._graph
+        out_set = self._env._output_set
+        # Multi-source shortest path from the output set via a temporary super-source.
+        src = "__super_src__"
+        H = G.copy()
+        H.add_node(src)
+        for o in out_set:
+            H.add_edge(src, o)
+        dist = nx.single_source_shortest_path_length(H, src)
+        non_output = [q for q in range(self._env.n) if q not in out_set]
+        # Farthest first; unreachable qubits (defect-isolated) treated as farthest.
+        self._plan = sorted(
+            non_output,
+            key=lambda q: -(dist.get(q, 10 ** 6) - 1),
+        )
+        self._plan_idx = 0
+
+    def select_action(self, obs_dict: dict) -> int:
+        mask = obs_dict["action_mask"]
+        while self._plan_idx < len(self._plan):
+            action = self._plan[self._plan_idx]
+            self._plan_idx += 1
+            if mask[action] == 1:
+                return action
+        valid = np.where(mask == 1)[0]
+        return int(self._rng.choice(valid))
+
+
 class TopologicalBaseline:
     """
     At each step, samples uniformly from the subset of valid qubits whose

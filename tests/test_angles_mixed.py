@@ -210,3 +210,43 @@ class TestMixedDefectRate:
             obs, r, terminated, truncated, _ = env.step(int(valid[0]))
             done = terminated or truncated
         assert 0.0 <= r <= 1.0
+
+
+# ---------------------------------------------------------------------------
+# Dense reward shaping (the irregular-graph learnability fix)
+# ---------------------------------------------------------------------------
+
+class TestRewardShaping:
+    def _run(self, env, seed):
+        obs, _ = env.reset(seed=seed)
+        rewards, done = [], False
+        while not done:
+            a = int(np.where(obs["action_mask"] == 1)[0][0])
+            obs, r, term, trunc, _ = env.step(a)
+            rewards.append(r)
+            done = term or trunc
+        return rewards
+
+    @pytest.mark.parametrize("topology", ["grid", "brickwork", "irregular"])
+    @pytest.mark.parametrize("use_angles", [False, True])
+    def test_shaped_sum_equals_sparse_score(self, topology, use_angles):
+        """Per-step shaped rewards must sum to the sparse terminal score exactly."""
+        for seed in range(12):
+            sparse = MBQCEnv(rows=4, cols=4, defect_rate=0.08, topology=topology,
+                             use_angles=use_angles, reward_shaping=False)
+            shaped = MBQCEnv(rows=4, cols=4, defect_rate=0.08, topology=topology,
+                             use_angles=use_angles, reward_shaping=True)
+            assert abs(sum(self._run(sparse, seed)) - sum(self._run(shaped, seed))) < 1e-9
+
+    def test_shaped_gives_intermediate_rewards(self):
+        """Shaping must produce nonzero reward before the terminal step."""
+        env = MBQCEnv(rows=4, cols=4, defect_rate=0.0, topology="grid",
+                      reward_shaping=True)
+        rewards = self._run(env, seed=0)
+        assert sum(r > 0 for r in rewards[:-1]) > 0   # not just the final step
+
+    def test_sparse_default_unchanged(self):
+        """Default (no shaping) still gives reward only at the terminal step."""
+        env = MBQCEnv(rows=4, cols=4, defect_rate=0.0, topology="grid")
+        rewards = self._run(env, seed=0)
+        assert all(r == 0.0 for r in rewards[:-1]) and rewards[-1] > 0

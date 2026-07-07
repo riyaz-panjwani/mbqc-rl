@@ -59,12 +59,14 @@ class RolloutBuffer:
         n_actions: int,
         gamma: float = 0.99,
         gae_lambda: float = 0.95,
+        aux_dim: int = 0,
     ) -> None:
         self.n_steps = n_steps
         self.obs_dim = obs_dim
         self.n_actions = n_actions
         self.gamma = gamma
         self.gae_lambda = gae_lambda
+        self.aux_dim = aux_dim          # >0 → store per-step auxiliary targets
         self.pos = 0
         self._reset_arrays()
 
@@ -86,6 +88,7 @@ class RolloutBuffer:
         done: bool,
         value: float,
         log_prob: float,
+        aux_target: np.ndarray | None = None,
     ) -> None:
         """Store one transition. Raises if the buffer is already full."""
         if self.pos >= self.n_steps:
@@ -97,6 +100,8 @@ class RolloutBuffer:
         self.dones[self.pos] = float(done)
         self.values[self.pos] = value
         self.log_probs[self.pos] = log_prob
+        if self.aux_dim > 0 and aux_target is not None:
+            self.aux_targets[self.pos] = aux_target
         self.pos += 1
 
     # ------------------------------------------------------------------
@@ -144,7 +149,7 @@ class RolloutBuffer:
         Only returns data up to self.pos (may be less than n_steps).
         """
         n = self.pos
-        return {
+        data = {
             "observations":  torch.as_tensor(self.observations[:n],  dtype=torch.float32),
             "action_masks":  torch.as_tensor(self.action_masks[:n],  dtype=torch.float32),
             "actions":       torch.as_tensor(self.actions[:n],       dtype=torch.long),
@@ -152,6 +157,9 @@ class RolloutBuffer:
             "advantages":    torch.as_tensor(self.advantages[:n],    dtype=torch.float32),
             "returns":       torch.as_tensor(self.returns[:n],       dtype=torch.float32),
         }
+        if self.aux_dim > 0:
+            data["aux_targets"] = torch.as_tensor(self.aux_targets[:n], dtype=torch.float32)
+        return data
 
     # ------------------------------------------------------------------
     # Internal
@@ -168,3 +176,5 @@ class RolloutBuffer:
         self.log_probs    = np.zeros(n,      dtype=np.float32)
         self.advantages   = np.zeros(n,      dtype=np.float32)
         self.returns      = np.zeros(n,      dtype=np.float32)
+        if self.aux_dim > 0:
+            self.aux_targets = np.zeros((n, self.aux_dim), dtype=np.float32)

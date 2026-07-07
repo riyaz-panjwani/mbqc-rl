@@ -44,7 +44,32 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from mbqc_rl.env.mbqc_env        import MBQCEnv
 from mbqc_rl.agent.policy        import MBQCActorCritic
+from mbqc_rl.agent.gnn_policy    import GNNActorCritic
 from mbqc_rl.baselines.classical import GreedyGflowBaseline, RandomBaseline
+
+
+def _load_policy(ckpt: dict, device: torch.device):
+    """Instantiate and load the right policy class from a checkpoint config."""
+    cfg = ckpt.get("config", {})
+    if cfg.get("model_type") == "gnn":
+        n = cfg.get("n", cfg.get("rows", 3) * cfg.get("cols", 3))
+        policy = GNNActorCritic(n=n, hidden_dim=cfg.get("hidden_dim", 64),
+                                n_heads=cfg.get("n_heads", 4),
+                                n_layers=cfg.get("n_layers", 3),
+                                use_angles=cfg.get("use_angles", False),
+                                virtual_node=cfg.get("virtual_node", False),
+                                weight_tied=cfg.get("weight_tied", False),
+                                pos_dim=cfg.get("pos_dim", 0),
+                                aux_layer_head=cfg.get("aux_layer_head", False))
+    else:
+        rows = cfg.get("rows", 3); cols = cfg.get("cols", 3)
+        policy = MBQCActorCritic(obs_dim=cfg.get("obs_dim", rows*cols*(rows*cols+1)),
+                                 n_actions=cfg.get("n_actions", rows*cols),
+                                 hidden_dim=cfg.get("hidden_dim", 256))
+    policy.load_state_dict(ckpt["policy_state_dict"])
+    policy.to(device)
+    policy.eval()
+    return policy
 
 
 # ── Default defect rate sweep ──────────────────────────────────────────────
@@ -116,6 +141,7 @@ def evaluate_at_rate(
     device: torch.device,
     use_angles: bool = False,
     clifford_fraction: float = 0.5,
+    topology: str = "grid",
 ) -> dict:
     """
     Run n_episodes at a fixed defect rate and return per-method statistics.
@@ -126,7 +152,8 @@ def evaluate_at_rate(
     gflow_n  = 0
 
     env_kwargs = dict(rows=rows, cols=cols, defect_rate=defect_rate,
-                      use_angles=use_angles, clifford_fraction=clifford_fraction)
+                      use_angles=use_angles, clifford_fraction=clifford_fraction,
+                      topology=topology)
     env_a = MBQCEnv(**env_kwargs)
     env_g = MBQCEnv(**env_kwargs)
     env_r = MBQCEnv(**env_kwargs)
@@ -211,6 +238,8 @@ def parse_args() -> argparse.Namespace:
                    help="Space-separated list of defect rates to test")
     p.add_argument("--rows",        type=int,   default=None)
     p.add_argument("--cols",        type=int,   default=None)
+    p.add_argument("--topology",    type=str,   default="grid",
+                   choices=["grid", "brickwork"])
     p.add_argument("--seed",        type=int,   default=2000)
     p.add_argument("--save-dir",    type=str,   default="results/transfer")
     p.add_argument("--no-save",     action="store_true")
@@ -227,20 +256,13 @@ def main() -> None:
 
     rows       = args.rows or cfg.get("rows",       3)
     cols       = args.cols or cfg.get("cols",       3)
-    obs_dim    = cfg.get("obs_dim",    rows * cols * (rows * cols + 1))
-    n_actions  = cfg.get("n_actions",  rows * cols)
-    hidden_dim = cfg.get("hidden_dim", 256)
     use_angles = cfg.get("use_angles", False)
     cliff_frac = cfg.get("clifford_fraction", 0.5)
 
-    policy = MBQCActorCritic(obs_dim=obs_dim, n_actions=n_actions,
-                              hidden_dim=hidden_dim)
-    policy.load_state_dict(ckpt["policy_state_dict"])
-    policy.to(device)
-    policy.eval()
+    policy = _load_policy(ckpt, device)
 
     print(f"\n{'═'*65}")
-    print(f"  TRANSFER TEST: {rows}×{cols} grid")
+    print(f"  TRANSFER TEST: {rows}×{cols} {args.topology}")
     print(f"  Checkpoint: {args.checkpoint}")
     print(f"  Rates: {args.defect_rates}")
     print(f"  Episodes per rate: {args.n_episodes}")
@@ -259,6 +281,7 @@ def main() -> None:
             device=device,
             use_angles=use_angles,
             clifford_fraction=cliff_frac,
+            topology=args.topology,
         )
         all_results.append(res)
         print(f"  {rate:>6.3f}  "
@@ -272,16 +295,18 @@ def main() -> None:
     if not args.no_save:
         os.makedirs(args.save_dir, exist_ok=True)
 
-        json_path = Path(args.save_dir) / f"transfer_{rows}x{cols}.json"
+        suffix = f"{rows}x{cols}" + ("" if args.topology == "grid"
+                                     else f"_{args.topology}")
+        json_path = Path(args.save_dir) / f"transfer_{suffix}.json"
         with open(json_path, "w") as f:
             json.dump(all_results, f, indent=2)
         print(f"  Results saved → {json_path}")
 
-        plot_path = Path(args.save_dir) / f"transfer_{rows}x{cols}.png"
+        plot_path = Path(args.save_dir) / f"transfer_{suffix}.png"
         _plot_transfer(
             all_results,
             save_to=str(plot_path),
-            title=f"Transfer Test — {rows}×{cols} grid (trained at 30% defects)",
+            title=f"Transfer Test — {rows}×{cols} {args.topology}",
         )
 
 

@@ -35,6 +35,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from mbqc_rl.env.mbqc_env        import MBQCEnv
 from mbqc_rl.agent.policy        import MBQCActorCritic
+from mbqc_rl.agent.gnn_policy    import GNNActorCritic
 from mbqc_rl.baselines.classical import GreedyGflowBaseline, RandomBaseline
 
 
@@ -63,17 +64,29 @@ def benchmark_checkpoint(ckpt_path: str, n_trials: int, defect_rate: float,
 
     rows       = cfg.get("rows", 3)
     cols       = cfg.get("cols", 3)
-    obs_dim    = cfg.get("obs_dim", rows * cols * (rows * cols + 1))
-    n_actions  = cfg.get("n_actions", rows * cols)
-    hidden_dim = cfg.get("hidden_dim", 256)
     use_angles = cfg.get("use_angles", False)
     cliff_frac = cfg.get("clifford_fraction", 0.5)
+    device     = torch.device("cpu")
 
-    policy = MBQCActorCritic(obs_dim=obs_dim, n_actions=n_actions,
-                             hidden_dim=hidden_dim)
+    if cfg.get("model_type") == "gnn":
+        n       = cfg.get("n", rows * cols)
+        policy  = GNNActorCritic(n=n, hidden_dim=cfg.get("hidden_dim", 64),
+                                 n_heads=cfg.get("n_heads", 4),
+                                 n_layers=cfg.get("n_layers", 3),
+                                 use_angles=use_angles,
+                                 virtual_node=cfg.get("virtual_node", False),
+                                 weight_tied=cfg.get("weight_tied", False),
+                                 pos_dim=cfg.get("pos_dim", 0),
+                                 aux_layer_head=cfg.get("aux_layer_head", False))
+    else:
+        obs_dim    = cfg.get("obs_dim", rows * cols * (rows * cols + 1))
+        n_actions  = cfg.get("n_actions", rows * cols)
+        hidden_dim = cfg.get("hidden_dim", 256)
+        policy = MBQCActorCritic(obs_dim=obs_dim, n_actions=n_actions,
+                                 hidden_dim=hidden_dim)
+
     policy.load_state_dict(ckpt["policy_state_dict"])
     policy.eval()
-    device = torch.device("cpu")
 
     env = MBQCEnv(rows=rows, cols=cols, defect_rate=defect_rate,
                   use_angles=use_angles, clifford_fraction=cliff_frac)

@@ -91,6 +91,7 @@ class PPOTrainer:
         clip_range: float = 0.2,
         vf_coef:    float = 0.5,
         ent_coef:   float = 0.01,
+        aux_weight: float = 0.0,
         device:     torch.device | None = None,
     ) -> None:
         self.env        = env
@@ -104,13 +105,16 @@ class PPOTrainer:
         self.clip_range = clip_range
         self.vf_coef    = vf_coef
         self.ent_coef   = ent_coef
+        self.aux_weight = aux_weight          # >0 → auxiliary gflow-layer loss
         self.device     = device or _best_device()
 
         self.policy.to(self.device)
 
         n       = env.n
         obs_dim = int(env.observation_space["observation"].shape[0])
-        self.buffer = RolloutBuffer(n_steps, obs_dim, n, gamma, gae_lambda)
+        aux_dim = n if aux_weight > 0 else 0
+        self.buffer = RolloutBuffer(n_steps, obs_dim, n, gamma, gae_lambda,
+                                    aux_dim=aux_dim)
 
         # Running environment state — persists across collect_rollout() calls
         # so episodes that straddle rollout boundaries are handled correctly.
@@ -152,12 +156,17 @@ class PPOTrainer:
             log_prob = log_prob_t.item()
             value    = value_t.item()
 
+            # Auxiliary target for the CURRENT state (before stepping): the
+            # per-node gflow layers of this episode's graph.
+            aux_t = self.env.gflow_layer_vector if self.aux_weight > 0 else None
+
             next_obs_dict, reward, terminated, truncated, _ = self.env.step(action)
             done = terminated or truncated
 
             self.buffer.add(
                 self._obs, self._action_mask, action,
                 reward, done, value, log_prob,
+                aux_target=aux_t,
             )
             ep_reward += reward
 
@@ -204,6 +213,8 @@ class PPOTrainer:
         old_lps     = data["log_probs"].to(self.device)
         advantages  = data["advantages"].to(self.device)
         returns     = data["returns"].to(self.device)
+        aux_targets = (data["aux_targets"].to(self.device)
+                       if self.aux_weight > 0 else None)
 
         # Normalise advantages across the entire rollout
         advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
@@ -211,7 +222,7 @@ class PPOTrainer:
         n_samples = obs.shape[0]
         indices   = np.arange(n_samples)
 
-        pg_losses, vf_losses, ent_losses = [], [], []
+        pg_losses, vf_losses, ent_losses, aux_losses = [], [], [], []
 
         self.policy.train()
         for _ in range(self.n_epochs):
@@ -227,9 +238,14 @@ class PPOTrainer:
                 b_adv      = advantages[idx_t]
                 b_returns  = returns[idx_t]
 
-                _, new_lps, entropy, new_values = self.policy.get_action_and_value(
-                    b_obs, b_masks, b_actions
-                )
+                if self.aux_weight > 0:
+                    _, new_lps, entropy, new_values, aux_pred = \
+                        self.policy.get_action_and_value(
+                            b_obs, b_masks, b_actions, return_aux=True)
+                else:
+                    _, new_lps, entropy, new_values = self.policy.get_action_and_value(
+                        b_obs, b_masks, b_actions
+                    )
 
                 # Clipped surrogate objective
                 log_ratio  = new_lps - b_old_lps
@@ -244,6 +260,12 @@ class PPOTrainer:
 
                 loss = pg_loss + self.vf_coef * vf_loss - self.ent_coef * ent_loss
 
+                # Auxiliary supervised loss: predict per-node gflow layers
+                if self.aux_weight > 0 and aux_pred is not None:
+                    aux_loss = ((aux_pred - aux_targets[idx_t]) ** 2).mean()
+                    loss = loss + self.aux_weight * aux_loss
+                    aux_losses.append(aux_loss.item())
+
                 self.optimizer.zero_grad()
                 loss.backward()
                 nn.utils.clip_grad_norm_(self.policy.parameters(), max_norm=0.5)
@@ -257,6 +279,7 @@ class PPOTrainer:
             "policy_loss": float(np.mean(pg_losses)),
             "value_loss":  float(np.mean(vf_losses)),
             "entropy":     float(np.mean(ent_losses)),
+            "aux_loss":    float(np.mean(aux_losses)) if aux_losses else 0.0,
         }
 
     # ------------------------------------------------------------------
