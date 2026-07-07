@@ -1,0 +1,202 @@
+{
+  "schema_version": "1.0",
+  "generator": "MBQCEnv seed\u2192graph; gflow via mbqc_rl.utils.gflow (cross-validated vs graphix, RESULTS.md \u00a78)",
+  "objective": "gflow-consistency reward in [0,1]; 1.0 = fully deterministic (valid) measurement order",
+  "files": {
+    "grids_defective_n1000.jsonl": {
+      "n_instances": 1000,
+      "sha256": "96dc0ec832391b853d46b2ead46ab9677df4040e6b828f6d8064312305dc21db",
+      "composition": "4 sizes \u00d7 5 defect rates \u00d7 50",
+      "sizes": [
+        "3x3",
+        "4x4",
+        "5x5",
+        "6x6"
+      ],
+      "defect_rates": [
+        0.01,
+        0.05,
+        0.1,
+        0.2,
+        0.3
+      ],
+      "seed_base": 1000000,
+      "cells": {
+        "3x3_d0.01": {
+          "n": 50,
+          "gflow_exists_rate": 0.98,
+          "mean_oracle": 0.98,
+          "mean_heuristic": 0.9733,
+          "mean_random": 0.4893
+        },
+        "3x3_d0.05": {
+          "n": 50,
+          "gflow_exists_rate": 0.98,
+          "mean_oracle": 0.98,
+          "mean_heuristic": 0.9653,
+          "mean_random": 0.4483
+        },
+        "3x3_d0.1": {
+          "n": 50,
+          "gflow_exists_rate": 0.86,
+          "mean_oracle": 0.86,
+          "mean_heuristic": 0.8387,
+          "mean_random": 0.4833
+        },
+        "3x3_d0.2": {
+          "n": 50,
+          "gflow_exists_rate": 0.62,
+          "mean_oracle": 0.62,
+          "mean_heuristic": 0.601,
+          "mean_random": 0.332
+        },
+        "3x3_d0.3": {
+          "n": 50,
+          "gflow_exists_rate": 0.38,
+          "mean_oracle": 0.38,
+          "mean_heuristic": 0.3667,
+          "mean_random": 0.192
+        },
+        "4x4_d0.01": {
+          "n": 50,
+          "gflow_exists_rate": 0.98,
+          "mean_oracle": 0.98,
+          "mean_heuristic": 0.9776,
+          "mean_random": 0.5219
+        },
+        "4x4_d0.05": {
+          "n": 50,
+          "gflow_exists_rate": 0.9,
+          "mean_oracle": 0.9,
+          "mean_heuristic": 0.8683,
+          "mean_random": 0.4157
+        },
+        "4x4_d0.1": {
+          "n": 50,
+          "gflow_exists_rate": 0.64,
+          "mean_oracle": 0.64,
+          "mean_heuristic": 0.6207,
+          "mean_random": 0.2867
+        },
+        "4x4_d0.2": {
+          "n": 50,
+          "gflow_exists_rate": 0.36,
+          "mean_oracle": 0.36,
+          "mean_heuristic": 0.3436,
+          "mean_random": 0.1888
+        },
+        "4x4_d0.3": {
+          "n": 50,
+          "gflow_exists_rate": 0.16,
+          "mean_oracle": 0.16,
+          "mean_heuristic": 0.1522,
+          "mean_random": 0.0747
+        },
+        "5x5_d0.01": {
+          "n": 50,
+          "gflow_exists_rate": 0.98,
+          "mean_oracle": 0.98,
+          "mean_heuristic": 0.9603,
+          "mean_random": 0.4971
+        },
+        "5x5_d0.05": {
+          "n": 50,
+          "gflow_exists_rate": 0.8,
+          "mean_oracle": 0.8,
+          "mean_heuristic": 0.7703,
+          "mean_random": 0.3792
+        },
+        "5x5_d0.1": {
+          "n": 50,
+          "gflow_exists_rate": 0.54,
+          "mean_oracle": 0.54,
+          "mean_heuristic": 0.5143,
+          "mean_random": 0.2704
+        },
+        "5x5_d0.2": {
+          "n": 50,
+          "gflow_exists_rate": 0.28,
+          "mean_oracle": 0.28,
+          "mean_heuristic": 0.2667,
+          "mean_random": 0.1339
+        },
+        "5x5_d0.3": {
+          "n": 50,
+          "gflow_exists_rate": 0.04,
+          "mean_oracle": 0.04,
+          "mean_heuristic": 0.0319,
+          "mean_random": 0.0213
+        },
+        "6x6_d0.01": {
+          "n": 50,
+          "gflow_exists_rate": 0.96,
+          "mean_oracle": 0.96,
+          "mean_heuristic": 0.9432,
+          "mean_random": 0.4887
+        },
+        "6x6_d0.05": {
+          "n": 50,
+          "gflow_exists_rate": 0.7,
+          "mean_oracle": 0.7,
+          "mean_heuristic": 0.6765,
+          "mean_random": 0.344
+        },
+        "6x6_d0.1": {
+          "n": 50,
+          "gflow_exists_rate": 0.3,
+          "mean_oracle": 0.3,
+          "mean_heuristic": 0.2834,
+          "mean_random": 0.1448
+        },
+        "6x6_d0.2": {
+          "n": 50,
+          "gflow_exists_rate": 0.04,
+          "mean_oracle": 0.04,
+          "mean_heuristic": 0.038,
+          "mean_random": 0.0192
+        },
+        "6x6_d0.3": {
+          "n": 50,
+          "gflow_exists_rate": 0.0,
+          "mean_oracle": 0.0,
+          "mean_heuristic": 0.0,
+          "mean_random": 0.0
+        }
+      }
+    },
+    "irregular_n500.jsonl": {
+      "n_instances": 501,
+      "sha256": "2ae57c716dd1ac3a0a6141153c625f5a735653b2e34bc1695bb2c248f0b8b04c",
+      "composition": "3 sizes \u00d7 167 (clean, defect_rate=0)",
+      "sizes": [
+        "4x4",
+        "5x5",
+        "6x6"
+      ],
+      "seed_base": 2000000,
+      "cells": {
+        "4x4_d0": {
+          "n": 167,
+          "gflow_exists_rate": 1.0,
+          "mean_oracle": 1.0,
+          "mean_heuristic": 0.8764,
+          "mean_random": 0.5143
+        },
+        "5x5_d0": {
+          "n": 167,
+          "gflow_exists_rate": 1.0,
+          "mean_oracle": 1.0,
+          "mean_heuristic": 0.9265,
+          "mean_random": 0.5029
+        },
+        "6x6_d0": {
+          "n": 167,
+          "gflow_exists_rate": 0.994,
+          "mean_oracle": 0.994,
+          "mean_heuristic": 0.9372,
+          "mean_random": 0.4938
+        }
+      }
+    }
+  }
+}
